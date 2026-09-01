@@ -589,7 +589,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
               .width;
       Rect valueRect{
           static_cast<int16_t>(band.x + availW - valueW - props.valueInset),
-          band.y, valueW, band.height};
+          static_cast<int16_t>(band.y + 2), valueW, band.height};
       frame.target().text(valueRect, item.value, valueStyle);
       availW = static_cast<int16_t>(availW - valueW - props.valueInset -
                                     props.textGap);
@@ -611,17 +611,21 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
     }
 
     if (item.subtitle) {
-      frame.target().text(Rect{band.x, band.y, availW, band.height}, item.label,
+      frame.target().text(
+          Rect{band.x, static_cast<int16_t>(band.y + 2), availW, band.height},
+          item.label,
                           labelStyle);
       frame.target().text(
-          Rect{content.x, static_cast<int16_t>(band.y + band.height),
+          Rect{content.x, static_cast<int16_t>(band.y + band.height + 2),
                content.width, subH},
           item.subtitle,
           textStyleWithForeground(props.subtitleText, style.foreground));
     } else {
       if (props.centerSingleLine)
         labelStyle.align = TextAlign::Center;
-      frame.target().text(Rect{band.x, band.y, availW, band.height}, item.label,
+      frame.target().text(
+          Rect{band.x, static_cast<int16_t>(band.y + 2), availW, band.height},
+          item.label,
                           labelStyle);
     }
 
