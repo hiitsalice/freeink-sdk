@@ -536,6 +536,7 @@ struct TextStyle {
   TextAlign align = TextAlign::Left;
   Color color = Color::Black;
   uint8_t maxLines = 1;
+  uint8_t lineGap = 0;
   bool bold = false;
   bool inverted = false;
   // Rotated text is single-line; the rect is interpreted in screen space and
@@ -549,7 +550,7 @@ struct TextStyle {
 // field (maxLines, align, bold, ...) marks the style as caller-owned.
 inline bool textStyleUnset(const TextStyle &s) {
   return s.font == 0 && s.align == TextAlign::Left && s.color == Color::Black &&
-         s.maxLines == 1 && !s.bold && !s.inverted &&
+         s.maxLines == 1 && s.lineGap == 0 && !s.bold && !s.inverted &&
          s.rotation == Rotation::None;
 }
 

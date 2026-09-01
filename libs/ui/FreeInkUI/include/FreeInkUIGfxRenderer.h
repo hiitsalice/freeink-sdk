@@ -181,11 +181,14 @@ class GfxRendererTarget final : public DrawTarget {
     }
 
     const std::vector<std::string> lines = renderer.wrappedText(fontId, text, rect.width, maxLines, epdStyle);
-    const int blockH = static_cast<int>(lines.size()) * lh;
+    const int lineGap = lines.size() > 1 ? style.lineGap : 0;
+    const int blockH =
+        static_cast<int>(lines.size()) * lh +
+        static_cast<int>(lines.size() > 1 ? lines.size() - 1 : 0) * lineGap;
     int y = rect.y + std::max(0, (rect.height - blockH) / 2);
     for (const auto& textLine : lines) {
       drawAligned(textLine.c_str(), y);
-      y += lh;
+      y += lh + lineGap;
     }
   }
 

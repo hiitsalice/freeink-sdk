@@ -49,6 +49,12 @@ struct TabBarProps {
   TabBarLayout layout = TabBarLayout::EqualWidth;
   int16_t leadingInset = 0;
   int16_t gap = 0;
+  // Optional individual gaps after each ContentWidth tab.
+  // Supply count - 1 entries; falls back to `gap` otherwise.
+  const int16_t* itemGaps = nullptr;
+  uint8_t itemGapCount = 0;
+  // Centre the complete ContentWidth tab group inside the bar.
+  bool centerContent = false;
   int16_t iconSize = 0;
   int16_t minTouchSize = 44;
   TabIconPainter iconPainter = nullptr;
@@ -76,6 +82,11 @@ void tabBar(Frame<MaxInteractions>& frame, Rect rect, const TabBarProps& props) 
 
   const int16_t dividerH = props.divider ? 1 : 0;
   const int16_t gap = props.gap > 0 ? props.gap : 0;
+  const auto gapAfter = [&](const uint8_t index) -> int16_t {
+    if (props.itemGaps != nullptr && index < props.itemGapCount)
+      return props.itemGaps[index] > 0 ? props.itemGaps[index] : 0;
+    return gap;
+  };
   const int16_t slotH = static_cast<int16_t>(rect.height - dividerH);
   const int16_t leadingInset = props.leadingInset > 0 ? props.leadingInset : 0;
   bool contentWidthLayout = props.layout == TabBarLayout::ContentWidth;
@@ -97,10 +108,12 @@ void tabBar(Frame<MaxInteractions>& frame, Rect rect, const TabBarProps& props) 
     if (pillW < minPillWidth) pillW = minPillWidth;
     return static_cast<int16_t>(pillW + props.tabInset.left + props.tabInset.right);
   };
-  int32_t naturalWidth = leadingInset + static_cast<int32_t>(gap) * (props.count - 1);
+  int32_t naturalWidth = leadingInset;
   if (contentWidthLayout) {
     for (uint8_t i = 0; i < props.count; ++i) {
       naturalWidth += contentSlotWidth(props.tabs[i]);
+      if (i + 1 < props.count)
+        naturalWidth += gapAfter(i);
     }
     // A content-width bar must stay inside its parent. Equal-width slots are
     // the safe fallback for long labels or narrow screens.
@@ -109,14 +122,21 @@ void tabBar(Frame<MaxInteractions>& frame, Rect rect, const TabBarProps& props) 
   const int16_t slotGap = !contentWidthLayout && props.layout == TabBarLayout::ContentWidth ? 0 : gap;
   const int16_t equalSlotW =
       static_cast<int16_t>((rect.width - static_cast<int32_t>(slotGap) * (props.count - 1)) / props.count);
-  int16_t nextSlotX = static_cast<int16_t>(rect.x + (contentWidthLayout ? leadingInset : 0));
+  const int16_t contentStart =
+      contentWidthLayout && props.centerContent
+          ? static_cast<int16_t>((rect.width - naturalWidth) / 2)
+          : static_cast<int16_t>(contentWidthLayout ? leadingInset : 0);
+  int16_t nextSlotX =
+      static_cast<int16_t>(rect.x + (contentStart > 0 ? contentStart : 0));
   for (uint8_t i = 0; i < props.count; ++i) {
     const TabItem& tab = props.tabs[i];
     const int16_t slotW = contentWidthLayout ? contentSlotWidth(tab) : equalSlotW;
     const int16_t slotX = contentWidthLayout
                               ? nextSlotX
                               : static_cast<int16_t>(rect.x + static_cast<int32_t>(i) * (equalSlotW + slotGap));
-    if (contentWidthLayout) nextSlotX = static_cast<int16_t>(slotX + slotW + slotGap);
+    if (contentWidthLayout)
+      nextSlotX = static_cast<int16_t>(
+          slotX + slotW + (i + 1 < props.count ? gapAfter(i) : 0));
     Rect slot{slotX, rect.y,
               static_cast<int16_t>(!contentWidthLayout && i == props.count - 1 ? rect.right() - slotX : slotW), slotH};
     Rect pill = slot.inset(props.tabInset);
@@ -152,7 +172,9 @@ void tabBar(Frame<MaxInteractions>& frame, Rect rect, const TabBarProps& props) 
       frame.target().stroke(pill, style.border, style.borderWidth, style.radius, style.corners);
     }
     if (tab.selected && props.selectedUnderline > 0) {
-      frame.target().fill(Rect{pill.x, static_cast<int16_t>(pill.bottom() - props.selectedUnderline), pill.width,
+      // Keep the selected underline pinned to the bottom of the tab slot,
+      // independent of the pill's vertical inset.
+      frame.target().fill(Rect{pill.x, static_cast<int16_t>(slot.bottom() - props.selectedUnderline), pill.width,
                                props.selectedUnderline},
                           props.selectedUnderlinePaint);
     }
