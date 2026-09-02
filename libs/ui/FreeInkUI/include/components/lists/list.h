@@ -71,6 +71,9 @@ struct ListProps {
   uint8_t rowRadius = 0;
   int16_t sidePadding = -1;
   int16_t textGap = 10;
+  // Additional vertical space between a row title and its subtitle.
+  int16_t subtitleGap = 0;
+  int16_t labelYOffset = 0;
   int16_t iconSize = 0;
   // Extra inset for the right-aligned value slot beyond sidePadding, so a
   // trailing chevron/value keeps air from the row edge on themes with tight
@@ -446,8 +449,12 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
                        .height
                  : subLh;
       const int16_t basePad = static_cast<int16_t>(rowH - labelLh - subLh);
+      const int16_t minimumGap =
+          props.subtitleGap > 0 ? props.subtitleGap : 0;
+      const int16_t retainedPad =
+          basePad > minimumGap ? basePad : minimumGap;
       const int16_t needed = static_cast<int16_t>(
-          labelLh * labelLines + subH + (basePad > 0 ? basePad : 0));
+          labelLh * labelLines + subH + retainedPad);
       if (needed > rowH)
         itemH = needed;
     } else if (labelLines > 1) {
@@ -514,8 +521,11 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
     // or its single line height, or 0 without a subtitle.
     Rect band = content;
     if (item.subtitle) {
+      const int16_t subtitleGap =
+          props.subtitleGap > 0 ? props.subtitleGap : 0;
       int16_t bandTop = static_cast<int16_t>(
-          content.y + (content.height - labelBlockH - subH) / 2);
+          content.y +
+          (content.height - labelBlockH - subH - subtitleGap) / 2);
       if (bandTop < content.y)
         bandTop = content.y;
       band = Rect{content.x, bandTop, content.width, labelBlockH};
@@ -612,11 +622,13 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
 
     if (item.subtitle) {
       frame.target().text(
-          Rect{band.x, static_cast<int16_t>(band.y + 2), availW, band.height},
+          Rect{band.x, static_cast<int16_t>(band.y + 2 + props.labelYOffset), availW, band.height},
           item.label,
                           labelStyle);
       frame.target().text(
-          Rect{content.x, static_cast<int16_t>(band.y + band.height + 2),
+          Rect{content.x,
+               static_cast<int16_t>(
+                   band.y + band.height + 2 + props.subtitleGap),
                content.width, subH},
           item.subtitle,
           textStyleWithForeground(props.subtitleText, style.foreground));
@@ -624,7 +636,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
       if (props.centerSingleLine)
         labelStyle.align = TextAlign::Center;
       frame.target().text(
-          Rect{band.x, static_cast<int16_t>(band.y + 2), availW, band.height},
+          Rect{band.x, static_cast<int16_t>(band.y + 2 + props.labelYOffset), availW, band.height},
           item.label,
                           labelStyle);
     }
