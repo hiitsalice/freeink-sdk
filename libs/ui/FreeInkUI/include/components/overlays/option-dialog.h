@@ -27,6 +27,16 @@ struct OptionDialogProps {
   TextStyle titleText{};
   TextStyle headlineText{};
   TextStyle messageText{};
+  // Vertical adjustment for the title's rendered position.
+  int16_t titleOffsetY = 0;
+  // Vertical adjustment for the message's rendered position.
+  int16_t messageOffsetY = 0;
+  // Extra space between the message and the buttons.
+  int16_t messageGapAfter = 0;
+  // When true, the title is rendered above the popup instead of inside it.
+  bool titleOutside = false;
+  // Optional bold prefix for an outside title, followed by the regular title.
+  const char* titlePrefix = nullptr;
   TextStyle buttonText{};
   StyleSet styles{};        // dialog panel
   StyleSet buttonStyles{};  // option buttons
@@ -50,7 +60,7 @@ struct OptionDialogProps {
 inline int16_t optionDialogHeight(const DrawTarget& target, const OptionDialogProps& props, const int16_t width) {
   const int16_t contentW = static_cast<int16_t>(width - props.padding.left - props.padding.right);
   int16_t height = static_cast<int16_t>(props.padding.top + props.padding.bottom);
-  if (props.title) {
+  if (props.title && !props.titleOutside) {
     height = static_cast<int16_t>(height + target.lineHeight(props.titleText.font) + props.gap);
   }
   if (props.headline) {
@@ -58,7 +68,9 @@ inline int16_t optionDialogHeight(const DrawTarget& target, const OptionDialogPr
                                   props.gap);
   }
   if (props.message) {
-    height = static_cast<int16_t>(height + measureWrappedText(target, props.message, props.messageText, contentW).height);
+    height = static_cast<int16_t>(
+        height + measureWrappedText(target, props.message, props.messageText, contentW).height +
+        props.messageGapAfter);
   }
   if (props.options && props.optionCount > 0) {
     const int16_t buttonsH =
@@ -86,8 +98,63 @@ void optionDialog(Frame<MaxInteractions>& frame, Rect rect, const OptionDialogPr
   int16_t cursorY = content.y;
   if (props.title) {
     const int16_t lh = frame.target().lineHeight(props.titleText.font);
-    drawText(frame.target(), Rect{content.x, cursorY, content.width, lh}, props.title, props.titleText);
-    cursorY = static_cast<int16_t>(cursorY + lh + props.gap);
+    TextStyle titleStyle = props.titleText;
+
+    if (props.titleOutside) {
+      // Draw the title above the popup. The bottom of the title sits
+      // 12 px above the popup's top edge.
+      const int16_t titleGap = 12;
+      Rect titleRect{
+          content.x,
+          static_cast<int16_t>(rect.y - titleGap - lh),
+          content.width,
+          lh};
+      titleRect.y = static_cast<int16_t>(titleRect.y + props.titleOffsetY);
+
+      if (props.titlePrefix) {
+        TextStyle prefixStyle = titleStyle;
+        prefixStyle.bold = true;
+        prefixStyle.align = TextAlign::Left;
+
+        TextStyle nameStyle = titleStyle;
+        nameStyle.bold = false;
+        nameStyle.align = TextAlign::Left;
+
+        const int prefixWidth =
+            frame.target().measureText(prefixStyle.font, props.titlePrefix, prefixStyle).width;
+        const int nameWidth =
+            frame.target().measureText(nameStyle.font, props.title, nameStyle).width;
+        const int totalWidth = prefixWidth + nameWidth;
+        int startX = titleRect.x + (titleRect.width - totalWidth) / 2;
+        if (startX < titleRect.x) {
+          startX = titleRect.x;
+        }
+
+        frame.target().text(
+            Rect{static_cast<int16_t>(startX),
+                 titleRect.y,
+                 static_cast<int16_t>(prefixWidth),
+                 titleRect.height},
+            props.titlePrefix,
+            prefixStyle);
+
+        frame.target().text(
+            Rect{static_cast<int16_t>(startX + prefixWidth),
+                 titleRect.y,
+                 static_cast<int16_t>(nameWidth),
+                 titleRect.height},
+            props.title,
+            nameStyle);
+      } else {
+        drawText(frame.target(), titleRect, props.title, titleStyle);
+      }
+    } else {
+      Rect titleRect{content.x, cursorY, content.width, lh};
+      titleRect.y = static_cast<int16_t>(titleRect.y + props.titleOffsetY);
+      drawText(frame.target(), titleRect, props.title, titleStyle);
+
+      cursorY = static_cast<int16_t>(cursorY + lh + props.gap);
+    }
   }
 
   if (props.headline) {
@@ -117,8 +184,17 @@ void optionDialog(Frame<MaxInteractions>& frame, Rect rect, const OptionDialogPr
   }
 
   if (props.message) {
-    Rect messageRect{content.x, cursorY, content.width,
-                     static_cast<int16_t>(content.bottom() - buttonsH - (buttonsH ? props.gap : 0) - cursorY)};
+    const int16_t messageHeight =
+        static_cast<int16_t>(content.bottom() - buttonsH -
+                             (buttonsH ? props.gap : 0) - cursorY);
+
+    // Keep the message's reserved layout area unchanged, but move only the
+    // actual text drawing rectangle.
+    Rect messageRect{content.x, cursorY, content.width, messageHeight};
+
+    // Apply the visual offset only to the actual message rectangle.
+    // The reserved layout area remains unchanged so the buttons do not move.
+    messageRect.y = static_cast<int16_t>(messageRect.y + props.messageOffsetY);
     drawText(frame.target(), messageRect, props.message, props.messageText);
   }
 
