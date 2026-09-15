@@ -729,8 +729,8 @@ public:
                       Rotation rotation = Rotation::None) = 0;
 };
 
-// UTF-8 horizontal ellipsis, appended to truncated lines.
-static constexpr const char *TEXT_ELLIPSIS = "\xE2\x80\xA6";
+// Three ASCII dots, matching Minuta's home-screen title truncation.
+static constexpr const char *TEXT_ELLIPSIS = "...";
 
 // SDK-owned text layout: greedy word wrap up to style.maxLines, hard breaks
 // on '\n', character-level breaking for words wider than the rect, ellipsis
