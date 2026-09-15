@@ -79,6 +79,9 @@ struct ListProps {
   // trailing chevron/value keeps air from the row edge on themes with tight
   // row padding.
   int16_t valueInset = 0;
+  // Vertical offset applied only to a trailing signal-bar suffix such as
+  // "||||"; + and * remain at the normal value position.
+  int16_t valueSignalYOffset = 0;
   // When a multi-line label would otherwise overlap its trailing value, keep
   // the wrapped title band visually balanced with that value. Callers with a
   // short, secondary value (such as a file extension) can disable this to
@@ -599,8 +602,41 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
               .width;
       Rect valueRect{
           static_cast<int16_t>(band.x + availW - valueW - props.valueInset),
-          static_cast<int16_t>(band.y + 2), valueW, band.height};
-      frame.target().text(valueRect, item.value, valueStyle);
+          static_cast<int16_t>(band.y + 1), valueW, band.height};
+
+      const char* signalBars = strchr(item.value, '|');
+      if (signalBars && props.valueSignalYOffset != 0) {
+        const int16_t prefixLen =
+            static_cast<int16_t>(signalBars - item.value);
+        char prefix[16] = {};
+        if (prefixLen > 0 &&
+            prefixLen < static_cast<int16_t>(sizeof(prefix))) {
+          memcpy(prefix, item.value, static_cast<size_t>(prefixLen));
+        }
+        const char* bars = signalBars;
+        const int16_t prefixW =
+            frame.target()
+                .measureText(valueStyle.font, prefix, valueStyle)
+                .width;
+        const int16_t barsW =
+            frame.target()
+                .measureText(valueStyle.font, bars, valueStyle)
+                .width;
+
+        if (prefixLen > 0) {
+          frame.target().text(
+              Rect{valueRect.x, valueRect.y, prefixW, valueRect.height},
+              prefix, valueStyle);
+        }
+
+        frame.target().text(
+            Rect{static_cast<int16_t>(valueRect.right() - barsW + 1),
+                 static_cast<int16_t>(valueRect.y + props.valueSignalYOffset),
+                 barsW, static_cast<int16_t>(valueRect.height - 3)},
+            bars, valueStyle);
+      } else {
+        frame.target().text(valueRect, item.value, valueStyle);
+      }
       availW = static_cast<int16_t>(availW - valueW - props.valueInset -
                                     props.textGap);
     }
