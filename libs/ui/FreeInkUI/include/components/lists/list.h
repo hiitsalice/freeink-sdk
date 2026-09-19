@@ -281,7 +281,7 @@ inline void drawListScrollIndicator(DrawTarget &target, const Rect rect,
   const bool left = side == 1;
   const Rect track{left ? static_cast<int16_t>(rect.x + inset)
                         : static_cast<int16_t>(rect.right() - width - inset),
-                   static_cast<int16_t>(rect.y - 9), width, static_cast<int16_t>(rect.height - 9)};
+                   static_cast<int16_t>(rect.y + 0), width, static_cast<int16_t>(rect.height - 25)};
   target.fill(track, Paint::dither(Color::LightGray));
   int16_t thumbH = static_cast<int16_t>(
       (static_cast<int32_t>(rect.height) * visible) / count);
