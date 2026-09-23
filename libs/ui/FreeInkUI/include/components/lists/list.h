@@ -602,7 +602,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
               .width;
       Rect valueRect{
           static_cast<int16_t>(band.x + availW - valueW - props.valueInset),
-          static_cast<int16_t>(band.y + 1), valueW, band.height};
+          static_cast<int16_t>(band.y + 2), valueW, band.height};
 
       const char* signalBars = strchr(item.value, '|');
       if (signalBars && props.valueSignalYOffset != 0) {
