@@ -14,6 +14,13 @@ struct ListItem {
   State state = StateNormal;
   int16_t actionValue = 0;
   bool enabled = true;
+  // Per-row label emphasis. Unlike isHeader, bold rows remain interactive.
+  bool bold = false;
+  // Additional horizontal offset for this row's label.
+  int16_t labelXOffset = 0;
+  // Filled trailing triangle indicator, independent of the row's text value.
+  bool triangleIndicator = false;
+  bool triangleDown = false;
   // Section header row: shorter, non-interactive, drawn with headerText and
   // an underline; never selected or focused.
   bool isHeader = false;
@@ -71,6 +78,9 @@ struct ListProps {
   uint8_t rowRadius = 0;
   int16_t sidePadding = -1;
   int16_t textGap = 10;
+  // Horizontal offset applied only to the row label; trailing values stay
+  // in their existing position.
+  int16_t labelXOffset = 0;
   // Additional vertical space between a row title and its subtitle.
   int16_t subtitleGap = 0;
   int16_t labelYOffset = 0;
@@ -516,6 +526,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
     // under the band so it never collides with the value.
     TextStyle labelStyle =
         textStyleWithForeground(props.labelText, style.foreground);
+    labelStyle.bold = item.bold;
     const int16_t labelH = frame.target().lineHeight(labelStyle.font);
     // The band holds every label line the height pre-pass measured (usually
     // one); the subtitle and the row's growth both follow it.
@@ -592,6 +603,33 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
       }
       availW = static_cast<int16_t>(availW - togW - props.valueInset -
                                     props.textGap);
+    } else if (item.triangleIndicator) {
+      constexpr int16_t TRIANGLE_SIZE = 12;
+      const int16_t tx =
+          static_cast<int16_t>(band.x + band.width - TRIANGLE_SIZE -
+                               props.valueInset);
+      const int16_t cy =
+          static_cast<int16_t>(band.y + band.height / 2);
+
+      if (item.triangleDown) {
+        frame.target().triangle(
+            Point{tx, static_cast<int16_t>(cy - TRIANGLE_SIZE / 2)},
+            Point{static_cast<int16_t>(tx + TRIANGLE_SIZE), static_cast<int16_t>(
+                cy - TRIANGLE_SIZE / 2)},
+            Point{static_cast<int16_t>(tx + TRIANGLE_SIZE / 2),
+                  static_cast<int16_t>(cy + TRIANGLE_SIZE / 2)},
+            style.foreground);
+      } else {
+        frame.target().triangle(
+            Point{tx, static_cast<int16_t>(cy - TRIANGLE_SIZE / 2)},
+            Point{tx, static_cast<int16_t>(cy + TRIANGLE_SIZE / 2)},
+            Point{static_cast<int16_t>(tx + TRIANGLE_SIZE),
+                  cy},
+            style.foreground);
+      }
+
+      availW = static_cast<int16_t>(availW - TRIANGLE_SIZE -
+                                    props.valueInset - props.textGap);
     } else if (item.value) {
       TextStyle valueStyle =
           textStyleWithForeground(props.valueText, style.foreground);
@@ -656,9 +694,16 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
       }
     }
 
+    const int16_t labelXOffset = static_cast<int16_t>(
+        props.labelXOffset + item.labelXOffset);
+    const int16_t shiftedLabelWidth =
+        availW > labelXOffset ? static_cast<int16_t>(availW - labelXOffset) : 0;
+
     if (item.subtitle) {
       frame.target().text(
-          Rect{band.x, static_cast<int16_t>(band.y + 2 + props.labelYOffset), availW, band.height},
+          Rect{static_cast<int16_t>(band.x + labelXOffset),
+               static_cast<int16_t>(band.y + 2 + props.labelYOffset),
+               shiftedLabelWidth, band.height},
           item.label,
                           labelStyle);
       frame.target().text(
@@ -672,7 +717,9 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
       if (props.centerSingleLine)
         labelStyle.align = TextAlign::Center;
       frame.target().text(
-          Rect{band.x, static_cast<int16_t>(band.y + 2 + props.labelYOffset), availW, band.height},
+          Rect{static_cast<int16_t>(band.x + labelXOffset),
+               static_cast<int16_t>(band.y + 2 + props.labelYOffset),
+               shiftedLabelWidth, band.height},
           item.label,
                           labelStyle);
     }
@@ -745,6 +792,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
         Rect content = row.inset(Insets{0, sidePad, 0, sidePad});
         TextStyle labelStyle =
             textStyleWithForeground(props.labelText, style.foreground);
+        labelStyle.bold = item.bold;
         labelStyle.maxLines = 1;
         TextStyle subtitleStyle =
             textStyleWithForeground(props.subtitleText, style.foreground);
