@@ -21,6 +21,8 @@ struct ListItem {
   // Filled trailing triangle indicator, independent of the row's text value.
   bool triangleIndicator = false;
   bool triangleDown = false;
+  // Filled leading triangle indicator at the row content's left edge.
+  bool leadingTriangleIndicator = false;
   // Section header row: shorter, non-interactive, drawn with headerText and
   // an underline; never selected or focused.
   bool isHeader = false;
@@ -603,6 +605,28 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
       }
       availW = static_cast<int16_t>(availW - togW - props.valueInset -
                                     props.textGap);
+    } else if (item.leadingTriangleIndicator) {
+      constexpr int16_t TRIANGLE_SIZE = 12;
+      const int16_t tx = band.x;
+      const int16_t cy =
+          static_cast<int16_t>(band.y + band.height / 2);
+
+      if (item.triangleDown) {
+        frame.target().triangle(
+            Point{tx, static_cast<int16_t>(cy - TRIANGLE_SIZE / 2)},
+            Point{static_cast<int16_t>(tx + TRIANGLE_SIZE),
+                  static_cast<int16_t>(cy - TRIANGLE_SIZE / 2)},
+            Point{static_cast<int16_t>(tx + TRIANGLE_SIZE / 2),
+                  static_cast<int16_t>(cy + TRIANGLE_SIZE / 2)},
+            style.foreground);
+      } else {
+        frame.target().triangle(
+            Point{tx, static_cast<int16_t>(cy - TRIANGLE_SIZE / 2)},
+            Point{tx, static_cast<int16_t>(cy + TRIANGLE_SIZE / 2)},
+            Point{static_cast<int16_t>(tx + TRIANGLE_SIZE),
+                  cy},
+            style.foreground);
+      }
     } else if (item.triangleIndicator) {
       constexpr int16_t TRIANGLE_SIZE = 12;
       const int16_t tx =
@@ -614,8 +638,8 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
       if (item.triangleDown) {
         frame.target().triangle(
             Point{tx, static_cast<int16_t>(cy - TRIANGLE_SIZE / 2)},
-            Point{static_cast<int16_t>(tx + TRIANGLE_SIZE), static_cast<int16_t>(
-                cy - TRIANGLE_SIZE / 2)},
+            Point{static_cast<int16_t>(tx + TRIANGLE_SIZE),
+                  static_cast<int16_t>(cy - TRIANGLE_SIZE / 2)},
             Point{static_cast<int16_t>(tx + TRIANGLE_SIZE / 2),
                   static_cast<int16_t>(cy + TRIANGLE_SIZE / 2)},
             style.foreground);
