@@ -542,6 +542,7 @@ struct TextStyle {
   // Rotated text is single-line; the rect is interpreted in screen space and
   // the text flows along the rotated axis.
   Rotation rotation = Rotation::None;
+  bool explicitlySet = false;
 };
 
 // True when `s` is entirely default-constructed. Screen's themed substitution
@@ -549,9 +550,9 @@ struct TextStyle {
 // cannot distinguish "unset" from "explicitly the small slot". Customizing any
 // field (maxLines, align, bold, ...) marks the style as caller-owned.
 inline bool textStyleUnset(const TextStyle &s) {
-  return s.font == 0 && s.align == TextAlign::Left && s.color == Color::Black &&
-         s.maxLines == 1 && s.lineGap == 0 && !s.bold && !s.inverted &&
-         s.rotation == Rotation::None;
+  return !s.explicitlySet && s.font == 0 && s.align == TextAlign::Left &&
+         s.color == Color::Black && s.maxLines == 1 && s.lineGap == 0 &&
+         !s.bold && !s.inverted && s.rotation == Rotation::None;
 }
 
 // Which corners a radius applies to (RoundedRaff-style cards round only the

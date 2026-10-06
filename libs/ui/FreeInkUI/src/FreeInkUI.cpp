@@ -95,6 +95,9 @@ ThemeTokens defaultThemeTokens(FontId smallFont, FontId bodyFont, FontId titleFo
   tokens.titleText.font = titleFont;
   tokens.titleText.align = TextAlign::Left;
   tokens.titleText.bold = true;
+  tokens.smallText.explicitlySet = true;
+  tokens.bodyText.explicitlySet = true;
+  tokens.titleText.explicitlySet = true;
   tokens.button = defaultButtonStyles();
   tokens.listRow = defaultListRowStyles();
   tokens.key = defaultKeyStyles();
