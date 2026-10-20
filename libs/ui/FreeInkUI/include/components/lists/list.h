@@ -664,7 +664,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
               .width;
       Rect valueRect{
           static_cast<int16_t>(band.x + availW - valueW - props.valueInset),
-          static_cast<int16_t>(band.y + 2), valueW, band.height};
+          static_cast<int16_t>(band.y + 3), valueW, band.height};
 
       const char* signalBars = strchr(item.value, '|');
       if (signalBars && props.valueSignalYOffset != 0) {
@@ -726,7 +726,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
     if (item.subtitle) {
       frame.target().text(
           Rect{static_cast<int16_t>(band.x + labelXOffset),
-               static_cast<int16_t>(band.y + 2 + props.labelYOffset),
+               static_cast<int16_t>(band.y + 3 + props.labelYOffset),
                shiftedLabelWidth, band.height},
           item.label,
                           labelStyle);
@@ -742,7 +742,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
         labelStyle.align = TextAlign::Center;
       frame.target().text(
           Rect{static_cast<int16_t>(band.x + labelXOffset),
-               static_cast<int16_t>(band.y + 2 + props.labelYOffset),
+               static_cast<int16_t>(band.y + 3 + props.labelYOffset),
                shiftedLabelWidth, band.height},
           item.label,
                           labelStyle);
