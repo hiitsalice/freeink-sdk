@@ -16,6 +16,8 @@ struct ListItem {
   bool enabled = true;
   // Per-row label emphasis. Unlike isHeader, bold rows remain interactive.
   bool bold = false;
+  // Per-row italic text (label and subtitle).
+  bool italic = false;
   // Additional horizontal offset for this row's label.
   int16_t labelXOffset = 0;
   // Filled trailing triangle indicator, independent of the row's text value.
@@ -529,6 +531,7 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
     TextStyle labelStyle =
         textStyleWithForeground(props.labelText, style.foreground);
     labelStyle.bold = item.bold;
+    labelStyle.italic = item.italic;
     const int16_t labelH = frame.target().lineHeight(labelStyle.font);
     // The band holds every label line the height pre-pass measured (usually
     // one); the subtitle and the row's growth both follow it.
@@ -736,7 +739,11 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
                    band.y + band.height + 2 + props.subtitleGap),
                content.width, subH},
           item.subtitle,
-          textStyleWithForeground(props.subtitleText, style.foreground));
+          [&] {
+            TextStyle subStyle = textStyleWithForeground(props.subtitleText, style.foreground);
+            subStyle.italic = item.italic;
+            return subStyle;
+          }());
     } else {
       if (props.centerSingleLine)
         labelStyle.align = TextAlign::Center;

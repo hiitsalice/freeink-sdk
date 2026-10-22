@@ -236,7 +236,10 @@ class GfxRendererTarget final : public DrawTarget {
   }
 
   static EpdFontFamily::Style fontStyle(const TextStyle& style) {
-    return style.bold ? EpdFontFamily::BOLD : EpdFontFamily::REGULAR;
+    int s = EpdFontFamily::REGULAR;
+    if (style.bold) s |= EpdFontFamily::BOLD;
+    if (style.italic) s |= EpdFontFamily::ITALIC;
+    return static_cast<EpdFontFamily::Style>(s);
   }
 };
 
