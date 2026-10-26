@@ -32,6 +32,10 @@ struct ListItem {
   // value string is ignored when set. Activation stays row-level via action.
   bool toggle = false;
   bool toggleChecked = false;
+  // Bold text drawn straight after the label (e.g. a bold word at the end of a normal sentence).
+  const char *labelBoldTail = nullptr;
+  // Thin 1px line from the row's left edge to 6px before the label (used for indented note rows).
+  bool leaderLine = false;
 };
 
 struct ListNav;
@@ -753,6 +757,22 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
                shiftedLabelWidth, band.height},
           item.label,
                           labelStyle);
+      if (item.leaderLine && labelXOffset > 6) {
+        frame.target().fill(Rect{band.x, static_cast<int16_t>(band.y + band.height / 2),
+                                 static_cast<int16_t>(labelXOffset - 6), 1},
+                            style.foreground);
+      }
+      if (item.labelBoldTail) {
+        TextStyle tailStyle = labelStyle;
+        tailStyle.bold = true;
+        const int16_t headW = frame.target().measureText(labelStyle.font, item.label, labelStyle).width;
+        if (shiftedLabelWidth > headW) {
+          frame.target().text(Rect{static_cast<int16_t>(band.x + labelXOffset + headW),
+                                   static_cast<int16_t>(band.y + 3 + props.labelYOffset),
+                                   static_cast<int16_t>(shiftedLabelWidth - headW), band.height},
+                              item.labelBoldTail, tailStyle);
+        }
+      }
     }
 
     if (props.selectedIndex == static_cast<int16_t>(i) &&
