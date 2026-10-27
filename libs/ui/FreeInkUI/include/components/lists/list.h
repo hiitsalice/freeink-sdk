@@ -34,6 +34,8 @@ struct ListItem {
   bool toggleChecked = false;
   // Bold text drawn straight after the label (e.g. a bold word at the end of a normal sentence).
   const char *labelBoldTail = nullptr;
+  // Italic text drawn straight after the label.
+  const char *labelItalicTail = nullptr;
   // Thin 1px line from the row's left edge to 6px before the label (used for indented note rows).
   bool leaderLine = false;
 };
@@ -771,6 +773,18 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
                                    static_cast<int16_t>(band.y + 3 + props.labelYOffset),
                                    static_cast<int16_t>(shiftedLabelWidth - headW), band.height},
                               item.labelBoldTail, tailStyle);
+        }
+      }
+      if (item.labelItalicTail) {
+        TextStyle tailStyle = labelStyle;
+        tailStyle.italic = true;
+        const int16_t headW = frame.target().measureText(labelStyle.font, item.label, labelStyle).width;
+        constexpr int16_t tailGap = 3;
+        if (shiftedLabelWidth > headW + tailGap) {
+          frame.target().text(Rect{static_cast<int16_t>(band.x + labelXOffset + headW + tailGap),
+                                   static_cast<int16_t>(band.y + 3 + props.labelYOffset),
+                                   static_cast<int16_t>(shiftedLabelWidth - headW - tailGap), band.height},
+                              item.labelItalicTail, tailStyle);
         }
       }
     }
