@@ -38,6 +38,8 @@ struct ListItem {
   const char *labelItalicTail = nullptr;
   // Thin 1px line from the row's left edge to 6px before the label (used for indented note rows).
   bool leaderLine = false;
+  // Stretch the words of a one-line label so the line fills the label width (justified text).
+  bool justify = false;
 };
 
 struct ListNav;
@@ -753,12 +755,62 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
     } else {
       if (props.centerSingleLine)
         labelStyle.align = TextAlign::Center;
-      frame.target().text(
+            bool justified = false;
+      if (item.justify && item.label && !item.labelBoldTail) {
+        const char *words[64];
+        uint16_t lens[64];
+        int16_t widths[64];
+        int wordCount = 0;
+        for (const char *p = item.label; *p && wordCount < 64;) {
+          while (*p == ' ') ++p;
+          if (!*p) break;
+          const char *start = p;
+          while (*p && *p != ' ') ++p;
+          words[wordCount] = start;
+          lens[wordCount] = static_cast<uint16_t>(p - start);
+          ++wordCount;
+        }
+        char wordBuf[128];
+        TextStyle wordStyle = labelStyle;
+        wordStyle.align = TextAlign::Left;
+        wordStyle.maxLines = 1;
+        int totalW = 0;
+        bool fits = wordCount >= 2 && wordCount < 64;
+        for (int w = 0; fits && w < wordCount; ++w) {
+          if (lens[w] >= sizeof(wordBuf)) {
+            fits = false;
+            break;
+          }
+          memcpy(wordBuf, words[w], lens[w]);
+          wordBuf[lens[w]] = '\0';
+          widths[w] = frame.target().measureText(wordStyle.font, wordBuf, wordStyle).width;
+          totalW += widths[w];
+        }
+        if (fits && totalW < shiftedLabelWidth) {
+          const int gaps = wordCount - 1;
+          const int extra = shiftedLabelWidth - totalW;
+          const int baseGap = extra / gaps;
+          const int remainder = extra % gaps;
+          int16_t wx = static_cast<int16_t>(band.x + labelXOffset);
+          for (int w = 0; w < wordCount; ++w) {
+            memcpy(wordBuf, words[w], lens[w]);
+            wordBuf[lens[w]] = '\0';
+            frame.target().text(Rect{wx, static_cast<int16_t>(band.y + 3 + props.labelYOffset),
+                                     static_cast<int16_t>(widths[w] + 4), band.height},
+                                wordBuf, wordStyle);
+            wx = static_cast<int16_t>(wx + widths[w] + baseGap + (w < remainder ? 1 : 0));
+          }
+          justified = true;
+        }
+      }
+      if (!justified) {
+        frame.target().text(
           Rect{static_cast<int16_t>(band.x + labelXOffset),
                static_cast<int16_t>(band.y + 3 + props.labelYOffset),
                shiftedLabelWidth, band.height},
           item.label,
                           labelStyle);
+      }
       if (item.leaderLine && labelXOffset > 6) {
         frame.target().fill(Rect{band.x, static_cast<int16_t>(band.y + band.height / 2),
                                  static_cast<int16_t>(labelXOffset - 6), 1},
