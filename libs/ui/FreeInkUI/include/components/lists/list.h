@@ -40,6 +40,8 @@ struct ListItem {
   bool leaderLine = false;
   // Stretch the words of a one-line label so the line fills the label width (justified text).
   bool justify = false;
+  // Same length as the label: '1' marks the characters drawn in bold (for example the "[mass noun]" parts).
+  const char *boldMask = nullptr;
 };
 
 struct ListNav;
@@ -756,10 +758,12 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
       if (props.centerSingleLine)
         labelStyle.align = TextAlign::Center;
             bool justified = false;
-      if (item.justify && item.label && !item.labelBoldTail) {
+      const int16_t labelY = static_cast<int16_t>(band.y + 3 + props.labelYOffset);
+      if (item.label && !item.labelBoldTail && (item.justify || item.boldMask)) {
         const char *words[64];
         uint16_t lens[64];
         int16_t widths[64];
+        bool boldWord[64];
         int wordCount = 0;
         for (const char *p = item.label; *p && wordCount < 64;) {
           while (*p == ' ') ++p;
@@ -768,14 +772,20 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
           while (*p && *p != ' ') ++p;
           words[wordCount] = start;
           lens[wordCount] = static_cast<uint16_t>(p - start);
+          boldWord[wordCount] = item.boldMask && item.boldMask[start - item.label] == '1';
           ++wordCount;
         }
         char wordBuf[128];
         TextStyle wordStyle = labelStyle;
         wordStyle.align = TextAlign::Left;
         wordStyle.maxLines = 1;
+        TextStyle boldStyle = wordStyle;
+        boldStyle.bold = true;
+        // A space measured on its own can come out as 0 (edge whitespace is trimmed), so measure it between letters.
+        const int16_t spaceW = static_cast<int16_t>(frame.target().measureText(wordStyle.font, "n n", wordStyle).width -
+                                                    frame.target().measureText(wordStyle.font, "nn", wordStyle).width);
         int totalW = 0;
-        bool fits = wordCount >= 2 && wordCount < 64;
+        bool fits = wordCount >= 1 && wordCount < 64;
         for (int w = 0; fits && w < wordCount; ++w) {
           if (lens[w] >= sizeof(wordBuf)) {
             fits = false;
@@ -783,21 +793,23 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
           }
           memcpy(wordBuf, words[w], lens[w]);
           wordBuf[lens[w]] = '\0';
-          widths[w] = frame.target().measureText(wordStyle.font, wordBuf, wordStyle).width;
+          const TextStyle &ws = boldWord[w] ? boldStyle : wordStyle;
+          widths[w] = frame.target().measureText(ws.font, wordBuf, ws).width;
           totalW += widths[w];
         }
-        if (fits && totalW < shiftedLabelWidth) {
-          const int gaps = wordCount - 1;
-          const int extra = shiftedLabelWidth - totalW;
-          const int baseGap = extra / gaps;
-          const int remainder = extra % gaps;
+        const int gaps = wordCount - 1;
+        const bool stretch = item.justify && gaps > 0;
+        if (fits && ((stretch && totalW < shiftedLabelWidth) ||
+                     (!stretch && totalW + gaps * spaceW <= shiftedLabelWidth))) {
+          const int extra = stretch ? shiftedLabelWidth - totalW : 0;
+          const int baseGap = stretch ? extra / gaps : spaceW;
+          const int remainder = stretch ? extra % gaps : 0;
           int16_t wx = static_cast<int16_t>(band.x + labelXOffset);
           for (int w = 0; w < wordCount; ++w) {
             memcpy(wordBuf, words[w], lens[w]);
             wordBuf[lens[w]] = '\0';
-            frame.target().text(Rect{wx, static_cast<int16_t>(band.y + 3 + props.labelYOffset),
-                                     static_cast<int16_t>(widths[w] + 4), band.height},
-                                wordBuf, wordStyle);
+            const TextStyle &ws = boldWord[w] ? boldStyle : wordStyle;
+            frame.target().text(Rect{wx, labelY, static_cast<int16_t>(widths[w] + 4), band.height}, wordBuf, ws);
             wx = static_cast<int16_t>(wx + widths[w] + baseGap + (w < remainder ? 1 : 0));
           }
           justified = true;
