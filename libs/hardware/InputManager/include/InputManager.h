@@ -411,9 +411,9 @@ class InputManager {
 
   static constexpr int ADC_NO_BUTTON = 3900;
   static constexpr unsigned long DEBOUNCE_DELAY = 5;
-  static constexpr unsigned long CONFIRM_BACK_HOLD_MS = 650;
-  static constexpr unsigned long CONFIRM_POWER_HOLD_MS = 400;
-  static constexpr unsigned long TWO_BUTTON_HOLD_MS = 650;
+  static constexpr unsigned long CONFIRM_BACK_HOLD_MS = 700;
+  static constexpr unsigned long CONFIRM_POWER_HOLD_MS = 700;
+  static constexpr unsigned long TWO_BUTTON_HOLD_MS = 700;
 
   // Touch timing / protocol constants (ported from the Murphy M3 CHSC6x
   // driver).
@@ -426,7 +426,7 @@ class InputManager {
   static constexpr unsigned long TOUCH_MULTI_SWIPE_MAX_MS = 2000;
   static constexpr int TOUCH_MULTI_CONTACT_SEPARATION_SLOP_PX = 45;
   static constexpr int64_t TOUCH_CONTACT_ASSIGNMENT_AMBIGUITY_PX_SQ = 64;
-  static constexpr unsigned long TOUCH_LONG_PRESS_MS = 500;  // shorter than HOME_KEY_LONG_PRESS_MS: a screen hold has
+  static constexpr unsigned long TOUCH_LONG_PRESS_MS = 700;  // shorter than HOME_KEY_LONG_PRESS_MS: a screen hold has
                                                              // no button travel to absorb
   static constexpr uint8_t TOUCH_READ_COMMAND = 0x00;
   static constexpr uint8_t TOUCH_FRAME_SIZE = 16;
