@@ -42,6 +42,8 @@ struct ListItem {
   bool justify = false;
   // Same length as the label: '1' marks the characters drawn in bold (for example the "[mass noun]" parts).
   const char *boldMask = nullptr;
+  // When > 0: a thin rule is drawn this many pixels below the row's top edge (a separator before a section).
+  int16_t ruleAbove = 0;
 };
 
 struct ListNav;
@@ -822,6 +824,12 @@ void list(Frame<MaxInteractions> &frame, Rect rect, const ListProps &props) {
                shiftedLabelWidth, band.height},
           item.label,
                           labelStyle);
+      }
+      if (item.ruleAbove > 0) {
+        const int16_t ruleW = static_cast<int16_t>(shiftedLabelWidth * 2 / 5);
+        frame.target().fill(Rect{static_cast<int16_t>(band.x + labelXOffset + (shiftedLabelWidth - ruleW) / 2),
+                                 static_cast<int16_t>(band.y + item.ruleAbove), ruleW, 1},
+                            style.foreground);
       }
       if (item.leaderLine && labelXOffset > 6) {
         frame.target().fill(Rect{band.x, static_cast<int16_t>(band.y + band.height / 2),
