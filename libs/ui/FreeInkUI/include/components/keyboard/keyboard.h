@@ -51,6 +51,10 @@ struct KeyboardKey {
   // UTF-8 alternate output for normal keys: drawn as a small corner hint and
   // inserted on long-press (ActionEvent::longPress; see keyboardAltOutputFor).
   const char* alt = nullptr;
+  // Explicit pixel width for compact, centred keyboard rows. Zero keeps the
+  // legacy proportional widthUnits layout; a zero-width key in a pixel row
+  // shares the remaining row width (the space bar).
+  int16_t widthPx = 0;
 };
 
 struct KeyboardRow {
@@ -102,6 +106,8 @@ struct KeyboardProps {
   // edge). Visual rects are unchanged.
   int16_t bottomHitOverflow = 0;
   bool inactiveSelection = false;
+  // Vertical adjustment for key labels only; key bounds and hit targets stay put.
+  int16_t labelOffsetY = 0;
 };
 
 // `numberRow` prepends a dedicated digit row (with shift-symbol alternates on
@@ -543,6 +549,7 @@ void keyboard(Frame<MaxInteractions>& frame, Rect rect, const KeyboardProps& pro
     bp.inputMask = props.inputMask;
     bp.state = state;
     bp.text = keyText;
+    bp.textOffsetY = props.labelOffsetY;
     bp.styles = styles;
     bp.minTouchSize = props.minTouchSize;
     bp.hitPadding.bottom = rowHitOverflow;
@@ -590,28 +597,71 @@ void keyboard(Frame<MaxInteractions>& frame, Rect rect, const KeyboardProps& pro
     const int16_t cy = static_cast<int16_t>(keyRect.y + keyRect.height / 2);
     const int16_t half = static_cast<int16_t>(keyRect.width * 3 / 10);
     frame.target().line(Point{static_cast<int16_t>(cx - half), static_cast<int16_t>(cy + 3)},
-                        Point{static_cast<int16_t>(cx + half), static_cast<int16_t>(cy + 3)}, 3, ink);
+                        Point{static_cast<int16_t>(cx + half), static_cast<int16_t>(cy + 3)}, 2, ink);
   };
 
   for (uint8_t row = 0; row < props.layout->rowCount; ++row) {
     const KeyboardRow& layoutRow = props.layout->rows[row];
     if (!layoutRow.keys || layoutRow.count == 0) continue;
     rowHitOverflow = row == props.layout->rowCount - 1 ? props.bottomHitOverflow : 0;
+    const int16_t y = static_cast<int16_t>(rect.y + row * (rowH + gap));
+
+    // Pixel-sized rows are used by compact keyboards. Fixed keys are centred
+    // when the row is narrower than the available width; a zero-width key
+    // absorbs the remaining width, which makes the space bar fill the bottom
+    // row without changing the dimensions of its neighbours.
+    bool hasPixelWidths = false;
+    int16_t fixedWidthTotal = 0;
+    int16_t flexibleCount = 0;
+    for (uint8_t col = 0; col < layoutRow.count; ++col) {
+      const int16_t widthPx = layoutRow.keys[col].widthPx;
+      if (widthPx > 0) {
+        hasPixelWidths = true;
+        fixedWidthTotal = static_cast<int16_t>(fixedWidthTotal + widthPx);
+      } else {
+        ++flexibleCount;
+      }
+    }
+
+    if (hasPixelWidths) {
+      const int16_t gapsWidth = static_cast<int16_t>(gap * (layoutRow.count - 1));
+      int16_t remaining = static_cast<int16_t>(rect.width - fixedWidthTotal - gapsWidth);
+      if (remaining < 0) remaining = 0;
+      int16_t x = rect.x;
+      if (flexibleCount == 0) x = static_cast<int16_t>(x + remaining / 2);
+
+      const int16_t flexWidth = flexibleCount > 0 ? static_cast<int16_t>(remaining / flexibleCount) : 0;
+      const int16_t flexRemainder = flexibleCount > 0
+                                        ? static_cast<int16_t>(remaining - flexWidth * flexibleCount)
+                                        : 0;
+      int16_t flexSeen = 0;
+      for (uint8_t col = 0; col < layoutRow.count; ++col) {
+        const KeyboardKey& key = layoutRow.keys[col];
+        int16_t width = key.widthPx;
+        if (width <= 0) {
+          width = flexWidth;
+          if (++flexSeen == flexibleCount) width = static_cast<int16_t>(width + flexRemainder);
+        }
+        drawKey(Rect{x, y, width, rowH}, key, logicalIndex++);
+        x = static_cast<int16_t>(x + width + gap);
+      }
+      continue;
+    }
+
     uint16_t units = static_cast<uint16_t>(layoutRow.insetUnits * 2);
     for (uint8_t col = 0; col < layoutRow.count; ++col) {
       units = static_cast<uint16_t>(units + (layoutRow.keys[col].widthUnits ? layoutRow.keys[col].widthUnits : 1));
     }
     const int16_t unitW = static_cast<int16_t>((rect.width - gap * (layoutRow.count - 1)) / units);
-    const int16_t y = static_cast<int16_t>(rect.y + row * (rowH + gap));
     int16_t x = static_cast<int16_t>(rect.x + layoutRow.insetUnits * unitW);
     const int16_t rowRight = static_cast<int16_t>(rect.right() - layoutRow.insetUnits * unitW);
     for (uint8_t col = 0; col < layoutRow.count; ++col) {
       const KeyboardKey& key = layoutRow.keys[col];
       const uint8_t keyUnits = key.widthUnits ? key.widthUnits : 1;
-      const int16_t w = col == layoutRow.count - 1 ? static_cast<int16_t>(rowRight - x)
-                                                   : static_cast<int16_t>(unitW * keyUnits);
-      drawKey(Rect{x, y, w, rowH}, key, logicalIndex++);
-      x = static_cast<int16_t>(x + w + gap);
+      const int16_t width = col == layoutRow.count - 1 ? static_cast<int16_t>(rowRight - x)
+                                                       : static_cast<int16_t>(unitW * keyUnits);
+      drawKey(Rect{x, y, width, rowH}, key, logicalIndex++);
+      x = static_cast<int16_t>(x + width + gap);
     }
   }
 }
