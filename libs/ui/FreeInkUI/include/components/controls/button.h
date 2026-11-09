@@ -29,6 +29,8 @@ struct ButtonProps {
   int16_t gap = 4;
   uint8_t borderEdges = EdgesAll;
   bool enabled = true;
+  // Shift only the label's text bounds, never the visual or hit rectangle.
+  int16_t textOffsetY = 0;
 };
 
 template <size_t MaxInteractions>
@@ -66,7 +68,7 @@ void button(Frame<MaxInteractions>& frame, Rect rect, const ButtonProps& props) 
     int16_t x = static_cast<int16_t>(content.x + (content.width - totalW) / 2);
     Rect iconRect{x, static_cast<int16_t>(content.y + (content.height - iconH) / 2), iconW, iconH};
     frame.target().bitmap(iconRect, icon, iconMode, style.foreground);
-    Rect textRect{static_cast<int16_t>(x + iconW + props.gap), content.y,
+    Rect textRect{static_cast<int16_t>(x + iconW + props.gap), static_cast<int16_t>(content.y + props.textOffsetY),
                   static_cast<int16_t>(content.right() - x - iconW - props.gap), content.height};
     TextStyle textStyle = textStyleWithForeground(props.text, style.foreground);
     textStyle.align = TextAlign::Left;
@@ -77,6 +79,7 @@ void button(Frame<MaxInteractions>& frame, Rect rect, const ButtonProps& props) 
   } else if (props.label) {
     TextStyle textStyle = textStyleWithForeground(props.text, style.foreground);
     textStyle.align = TextAlign::Center;
+    content.y = static_cast<int16_t>(content.y + props.textOffsetY);
     frame.target().text(content, props.label, textStyle);
   }
 }
